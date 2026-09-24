@@ -1,8 +1,8 @@
-#Vylepšení React aplikace
+# Vylepšení React aplikace
 --
-Vylepšení zadané react aplikace v týmu.
+##### Vylepšení zadané react aplikace v týmu.
 --
-###Členi
+### Členové
 Jan Čaloun
 Vít Jandoš
 Jiří Holub
