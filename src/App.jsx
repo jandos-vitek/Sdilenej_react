@@ -36,8 +36,7 @@ const AppContentInner = () => {
 
     const appElement = document.querySelector('#app');
 
-    // Odeber předchozí třídy (volitelné, pokud chceš mít vždy jen jednu)
-    appElement.className = '';
+
 
     // Vytvoř kebab-case třídu z cesty
     const kebabClass = location.pathname

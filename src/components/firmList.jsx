@@ -20,6 +20,7 @@ import WorkshopList from './workshoplist';
 import { setCookie, getCookie, deleteCookie } from '../utils/cookie';
 import useIsSmall from '../utils/mobileDetect';
 
+axios.defaults.withCredentials = true;
 const getFirstPart = (text) => {
   const parts = text?.split(/\/\(kont\)/) ?? [];
   return parts[0];

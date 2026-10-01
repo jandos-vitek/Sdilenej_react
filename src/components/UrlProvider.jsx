@@ -7,10 +7,7 @@ const UrlContext = createContext(null);
 
 const UrlProvider = ({ children }) => {
   const [isDirty, setIsDirty] = useState(false);
-  const url = PRODUCTION
-    ? 'https://crm.skch.cz/ajax0/v3/'
-    : 'http://localhost/';
-
+  const url = 'http://localhost:8000/';
   const apiUrl = useMemo(() => `${url}rest.php/`, [url]);
 
   const [user, setUser] = useState('');
@@ -18,7 +15,7 @@ const UrlProvider = ({ children }) => {
     const fetchUser = async () => {
       let data = 'reader';
       try {
-        const response = await fetch(`${url}rest.php/user`);
+       const response = await fetch(`${url}rest.php/user`, { credentials: 'include' });
         if (!response.ok) {
           setUser('');
         }
