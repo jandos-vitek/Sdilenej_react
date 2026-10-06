@@ -3,7 +3,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useUrl } from './UrlProvider';
 import isSmall from '../utils/mobileDetect';
 
@@ -18,6 +18,7 @@ const CampaignList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [isWrapped, setIsWrapped] = useState(false);
 
   const toggleWrap = () => {
@@ -29,7 +30,10 @@ const CampaignList = () => {
       console.log('fetchContacts');
 
       try {
-        const response = await axios.get(`${apiUrl}/campaigns/`);
+        const response = await axios.get(`${apiUrl}/campaigns/`, {
+          params: { t: Date.now() }
+        });
+
         if (Array.isArray(response.data) && response.data.length === 0
           && response.data.msg !== undefined) {
           setError('Žádné kontakty.');
@@ -46,7 +50,7 @@ const CampaignList = () => {
     };
 
     fetchContacts();
-  }, [apiUrl]);
+  }, [apiUrl, location.key]);
 
   const handleEditClick = (campaign) => {
     navigate(`/campaignAdd/${campaign.id}`);

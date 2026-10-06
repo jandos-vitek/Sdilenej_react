@@ -171,19 +171,39 @@ const FirmList = () => {
 
   const csvURL = `${apiUrl}firms/list/?csvexport`;
 
-  const fetchData = async () => {
+  const applyFilterToData = (sourceData, value) => {
+    if (!value || value.length < 2) {
+      return sourceData;
+    }
+
+    const normalizedValue = value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    return sourceData.filter((item) => {
+      const itemName = item.name
+        ? item.name
+          .toString()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+        : '';
+      return itemName.includes(normalizedValue);
+    });
+  };
+
+  const fetchData = async (nextFilterText = filterText) => {
     setLoading(true);
     console.log(Restdata);
     console.log(restFilter);
     try {
       const queryString = restFilter ? `/filter/?${restFilter}` : '';
       const response = await axios.get(`${apiUrl}firms/list${queryString}`);
-      setData(response.data);
-      setprevData(response.data);
-      if (filterText.length > 0) {
-        // zachovat vyfiltrovanou firmu
-        makeHandleFilter(filterText, { code: ' ' });
-      }
+      const refreshedData = response.data;
+      setprevData(refreshedData);
+      setData(applyFilterToData(refreshedData, nextFilterText));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -426,10 +446,8 @@ const FirmList = () => {
   const handleSaveAfterAddFirm = (FirmName) => {
     console.log(FirmName);
     setFilterText(FirmName);
-    fetchData();
-    setData(prevData);
     setSelectedFirm(null);
-    makeHandleFilter(FirmName, { code: ' ' });
+    fetchData(FirmName);
   };
 
   // return section
