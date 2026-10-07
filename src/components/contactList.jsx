@@ -2,24 +2,35 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import EditContactForm from './editContactForm';
 import Notification from './notification';
 import { useUrl } from './UrlProvider';
 
 const ContactList = ({
-  firmId, firmName, onClose, onSave,
+  firmId, firmName, onClose,
 }) => {
   const { apiUrl } = useUrl();
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [msg, setMsg] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const listPath = `/contacts/${firmId}`;
+  const selectedContact = itemId === 'new'
+    ? { id: null, firm_id: firmId, main: !contacts.some((contact) => contact.main === '1') }
+    : contacts.find((entry) => String(entry.id) === itemId);
+
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
     const fetchContacts = async () => {
       try {
         const response = await axios.get(`${apiUrl}contacts/${firmId}`);
+        if (!active) return;
         if (Array.isArray(response.data) && response.data.length === 0
         && response.data.msg !== undefined) {
           setError('Žádné kontakty.');
@@ -28,14 +39,15 @@ const ContactList = ({
           setContacts(response.data);
         }
       } catch (err) {
-        setError(err.message);
+        if (active) setError(err.message);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchContacts();
-  }, [firmId, selectedContact]);
+    return () => { active = false; };
+  }, [apiUrl, firmId, itemId]);
 
   const deleteContact = async (contactId) => {
     try {
@@ -52,7 +64,7 @@ const ContactList = ({
     }
   };
   const handleClose = () => {
-    setSelectedContact(null);
+    navigate(listPath);
   };
 
   const handledelClick = (contact) => {
@@ -62,47 +74,31 @@ const ContactList = ({
     }
   };
   const handleEditClick = (contact) => {
-    console.log(contact);
-    setSelectedContact(contact);
+    navigate(`${listPath}/${contact.id || 'new'}`);
   };
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      if (!selectedContact) {
-        onClose(null);
-      }
-    }
-  };
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedContact]);
 
-  const handleSave = (updatedContact) => {
-    setContacts(contacts.map(
-      (contact) => (contact.id === updatedContact.id ? updatedContact : contact),
-    ));
-    setSelectedContact(null); // Close the form after saving
-    onSave();
-  };
+  const handleSave = () => navigate(listPath);
 
   const handleCopy = (inputValue) => {
     navigator.clipboard.writeText(inputValue).then(() => {
       setMsg('Zkopírováno!');
     }).catch((err) => {
-      setError('Chyba při kopírování: ', err);
+      setError(`Chyba při kopírování: ${err.message}`);
     });
   };
 
-  const Clipboard = (formData) => {
-    console.log(formData);
-    const formattedString = formData.filter((item) => item).join(', ');
-    handleCopy(formattedString);
-  };
+  const Clipboard = (values) => handleCopy(values.filter(Boolean).join(', '));
 
   if (loading) {
     return <p className="no-data">Načítám...</p>;
+  }
+  if (itemId && !selectedContact && !error) {
+    return (
+      <div>
+        <button type="button" onClick={handleClose}>Zpět na seznam</button>
+        <p className="no-data">Záznam nebyl nalezen.</p>
+      </div>
+    );
   }
   if (error) {
     return (
@@ -113,11 +109,12 @@ const ContactList = ({
     );
   }
   return (
-    <div className={`floating-layer ${!firmId ? 'hidden' : ''}`}>
+    <div>
       {msg && (<Notification message={msg} type="edit-firm-success" />)}
       {error && (<Notification message={error} type="edit-firm-error" />)}
       {selectedContact ? (
         <EditContactForm
+          key={itemId}
           contact={selectedContact}
           onSave={handleSave}
           onClose={handleClose}
@@ -125,7 +122,7 @@ const ContactList = ({
         />
       ) : (
         <>
-          <button className="close-button" type="button" onClick={onClose}>X</button>
+          <button type="button" onClick={onClose}>Zpět na firmy</button>
           <table className="responsive-table">
             <caption><h3>{`${firmName.split('/(kont)')[0]} - kontakty`}</h3></caption>
             <thead>
@@ -181,5 +178,4 @@ ContactList.propTypes = {
   firmId: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   firmName: PropTypes.string.isRequired,
-  onSave: PropTypes.func.isRequired,
 };

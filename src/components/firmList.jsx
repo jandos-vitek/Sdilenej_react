@@ -6,17 +6,14 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ContactList from './contactList';
 import Filter from './filter';
 import EditFirmForm from './firmform';
 import FutureEvents from './futureEvents';
 import GiftList from './giftList';
-import MeetList from './meetList';
 import Notification from './notification';
 import PracticeList from './practiceList';
 // import SearchContact from './searchContact';
 import { useUrl } from './UrlProvider';
-import WorkshopList from './workshoplist';
 import { setCookie, getCookie, deleteCookie } from '../utils/cookie';
 import useIsSmall from '../utils/mobileDetect';
 
@@ -37,11 +34,8 @@ const FirmList = () => {
   const [error, setError] = useState(null);
   const [selectedFirm, setSelectedFirm] = useState(null);
   const [selectedFirmName, setSelectedFirmName] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [selectedMeet, setSelectedMeet] = useState(null);
   const [selectedGift, setSelectedGift] = useState(null);
   const [selectedPractice, setSelectedPractice] = useState(null);
-  const [selectedWS, setSelectedWS] = useState(0);
   const { url, apiUrl, user } = useUrl();
   const [filterText, setFilterText] = useState('');
   const [contactResult, setContactResult] = useState('');
@@ -267,15 +261,12 @@ const FirmList = () => {
     setSelectedFirm(Number(firmId));
   };
 
-  const handleEditContactClick = (id, name) => {
-    console.log(id);
-    setSelectedFirmName(name);
-    setSelectedContact(id);
+  const handleEditContactClick = (id) => {
+    navigate(`/contacts/${id}`);
   };
 
-  const handleworkshoplistClick = (firmId, name) => {
-    setSelectedFirmName(name);
-    setSelectedWS(firmId);
+  const handleworkshoplistClick = (id) => {
+    navigate(`/workshops/${id}`);
   };
 
   const handleRestFilter = (RestData) => {
@@ -285,18 +276,8 @@ const FirmList = () => {
     setRestData({ show_inactive: RestData.show_inactive });
   };
 
-  const handleSaveContact = () => {
-    // setSelectedContact(null);
-    fetchData();
-  };
 
-  const handleWS = () => {
-    setSelectedWS(null);
-  };
 
-  const handleMeet = () => {
-    setSelectedMeet(null);
-  };
 
   const handlePractice = () => {
     setSelectedPractice(null);
@@ -321,9 +302,8 @@ const FirmList = () => {
     navigate(`/events/${id}`);
   };
 
-  const handleEditMeetClick = (id, name) => {
-    setSelectedFirmName(name);
-    setSelectedMeet(id);
+  const handleEditMeetClick = (id) => {
+    navigate(`/meets/${id}`);
   };
 
   const deleteFirm = async (firmId) => {
@@ -357,17 +337,8 @@ const FirmList = () => {
     setContactResult(result);
   };
 
-  const handleCloseContact = () => {
-    setSelectedContact(null);
-  };
 
-  const handleCloseMeet = () => {
-    setSelectedMeet(null);
-  };
 
-  const handleCloseWS = () => {
-    setSelectedWS(null);
-  };
 
   const handleCloseGift = () => {
     setSelectedGift(null);
@@ -512,14 +483,6 @@ const FirmList = () => {
         />
       ) : ('')}
 
-      {selectedMeet ? (
-        <MeetList
-          firmId={selectedMeet}
-          onSave={handleMeet}
-          firmName={selectedFirmName}
-          onClose={handleCloseMeet}
-        />
-      ) : ('')}
 
       {selectedPractice ? (
         <PracticeList
@@ -530,23 +493,7 @@ const FirmList = () => {
         />
       ) : ('')}
 
-      {selectedWS ? (
-        <WorkshopList
-          firmId={selectedWS}
-          onSave={handleWS}
-          firmName={selectedFirmName}
-          onClose={handleCloseWS}
-        />
-      ) : ('')}
 
-      {selectedContact ? (
-        <ContactList
-          firmId={selectedContact}
-          onSave={handleSaveContact}
-          firmName={getFirstPart(selectedFirmName)}
-          onClose={handleCloseContact}
-        />
-      ) : ('')}
 
       {selectedFirm ? (
         <EditFirmForm

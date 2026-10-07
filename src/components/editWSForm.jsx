@@ -76,7 +76,7 @@ const EditWSForm = ({ contact, onSave, onClose }) => {
         {formData.id ? 'Upravit ' : 'Přidat '}
         akci
       </h2>
-      <button className="close-button" type="button" onClick={onClose}>X</button>
+      <button type="button" onClick={onClose}>Zpět na seznam</button>
       {isErrorVisible && (<Notification message="Chyba při ukládání!" type="edit-firm-error" />)}
       <div className="hidden">
         <label htmlFor="id">ID</label>
