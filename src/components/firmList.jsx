@@ -7,6 +7,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ContactList from './contactList';
+import DataTable from './DataTable';
 import Filter from './filter';
 import EditFirmForm from './firmform';
 import FutureEvents from './futureEvents';
@@ -477,6 +478,11 @@ const FirmList = () => {
     });
   }
 
+  const tableColumns = columns.map((column) => ({
+    key: column,
+    label: column === 'name' ? `Firma ( ${mappedData.length} )` : column,
+  }));
+
   return (
     <>
       <FutureEvents />
@@ -633,124 +639,142 @@ const FirmList = () => {
             </div>
           )}
 
-          <table className={`firmlist responsive-table ${isWrapped ? 'wrap-cells' : 'nowrap-cells'}`}>
-            {mappedData.length !== 0 ? '' : (
-              <caption>
-                {mappedData.length}
-                {' '}
-                záznamů
-              </caption>
-            )}
-            <thead>
-              <tr>
-                {/* nový sloupec pro checkboxy */}
-                <th>
-                  <span
-                    onClick={toggleWrap}
-                    style={{
-                      cursor: 'pointer',
-                      fontSize: '1.2em',
-                      paddingLeft: '1em',
-                    }}
-                    title="Přepnout zalamování textu"
-                  >
-                    🔁
-                  </span>
-                  &nbsp;Vybrat
-                </th>
+          <DataTable
+          data={mappedData}
+          columns={tableColumns}
+          className={`firmlist responsive-table ${isWrapped ? 'wrap-cells' : 'nowrap-cells'}`}
+          caption={mappedData.length === 0 ? (
+            <>
+              {mappedData.length}
+              {' '}
+              záznamů
+            </>
+          ) : null}
+          sortConfig={sortConfig}
+          onSort={sortByKey}
+          renderLeadingHeader={() => (
+            <>
+              <span
+                onClick={toggleWrap}
+                style={{
+                  cursor: 'pointer',
+                  fontSize: '1.2em',
+                  paddingLeft: '1em',
+                }}
+                title="Přepnout zalamování textu"
+              >
+                🔁
+              </span>
+              &nbsp;Vybrat
+            </>
+          )}
+          renderLeadingCell={(row, rowIndex) => (
+            <input
+              type="checkbox"
+              checked={selectedIds.has(row.id)}
+              onChange={(e) => {
+                toggleSelectWithShift(
+                  rowIndex,
+                  row.id,
+                  Boolean(e.nativeEvent.shiftKey),
+                );
+              }}
+            />
+          )}
+          renderActionsHeader={() => (
+            <div style={{ textAlign: 'left' }}>
+              {addFirmBnt()}
+              <a href={csvURL} id="csv_export">CSV export</a>
+            </div>
+          )}
+          getRowProps={(row) => ({
+            id: `row-${row.name.charAt(0).toLowerCase()}`,
+          })}
+          getHeaderClassName={(column, currentSortConfig) => (
+            `col-${column.key} ${
+              currentSortConfig.key === column.key ? 'sorted-colm' : ''
+            }`
+          )}
+          getCellClassName={(column, currentSortConfig) => (
+            column.key === 'name'
+              ? ''
+              : `col-${column.key} ${
+                currentSortConfig.key === column.key ? 'sorted-colm' : ''
+              }`
+          )}
+          renderCell={(row, column) => {
+            if (column.key === 'name') {
+              const parts = row[column.key]?.split(/\/\(kont\)/) ?? [];
 
-                {columns.map((column) => (
-                  <th
-                    key={column}
-                    onClick={() => sortByKey(column)}
-                    className={`col-${column} ${getSortIcon(column) ? 'sorted-colm' : ''}`}
-                  >
-                    {column === 'name' ? (
-                      <>
-                        Firma (
-                        {' '}
-                        {mappedData.length}
-                        {' '}
-                        )
-                        {getSortIcon(column)}
-                      </>
-                    ) : (
-                      `${column} ${getSortIcon(column)}`
-                    )}
-                  </th>
-                ))}
-                <th style={{ 'text-align': 'left' }}>
-                  {addFirmBnt()}
-                  <a href={csvURL} id="csv_export">CSV export</a>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {mappedData.map((row, rowIndex) => (
-                <tr key={row.id} id={`row-${row.name.charAt(0).toLowerCase()}`}>
-                  {/* checkbox sloupec */}
-                  <td key={`sel-${row.id}`}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(row.id)}
-                      onClick={(e) => {
-                        // e.stopPropagation(); // ať klik na checkbox neotevírá edit
-                        console.log(row.id);
-                        toggleSelectWithShift(rowIndex, Number(row.id), e.shiftKey);
-                        console.log(row.id);
-                      }}
-                      onChange={() => {
-                        // podpora z klávesnice (mezerník) – bez shift rozsahu
-                        toggleSelectWithShift(rowIndex, row.id, false);
-                      }}
-                    />
-                  </td>
+              return (
+                <span
+                  onClick={() => handleEditClick(row.id, row.name)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className={isWrapped ? 'wrap' : ''}>{parts[0]}</span>
+                  {parts[1] && <span className="col-contacts">{parts[1]}</span>}
+                </span>
+              );
+            }
 
-                  {columns.map((column) => (
-                    column === 'name' ? (
-                      <td
-                        key={column}
-                        onClick={() => handleEditClick(row.id, row.name)}
-                      >
-                        {(() => {
-                          const parts = row[column]?.split(/\/\(kont\)/) ?? [];
-                          return (
-                            <>
-                              <span className={isWrapped ? 'wrap' : ''}>{parts[0]}</span>
-                              {parts[1] && <span className="col-contacts">{parts[1]}</span>}
-                            </>
-                          );
-                        })()}
-                      </td>
-                    ) : (
-                      <td
-                        key={column}
-                        className={`col-${column} ${getSortIcon(column) ? 'sorted-colm' : ''}`}
-                      >
-                        {row[column]}
-                      </td>
-                    )
-                  ))}
-
-                  <td>
-                    <div className={isSmall ? 'small-resolution' : ''}>
-                      <button type="button" onClick={() => handleEditContactClick(row.id, row.name)}>Kontakty</button>
-                      <button type="button" onClick={() => handleEditMeetClick(row.id, row.name)} className="blue-btn">Schůzky</button>
-                      <button type="button" onClick={() => handleworkshoplistClick(row.id, row.name)}>Akce</button>
-                      <button type="button" onClick={() => handleEditEventClick(row.id, row.name)} className="green-btn">Událost</button>
-                      <button type="button" onClick={() => handleGiftlistClick(row.id, row.name)} className="orange-btn">Dary</button>
-                      <button type="button" onClick={() => handlePracticeListClick(row.id, row.name)} className="purple-btn">Praxe</button>
-                      {user.user !== 'reader' ? (
-                        <button type="button" onClick={() => handledelClick(row.id, row.name)} className="del-btn">Smazat</button>
-                      ) : (
-                        ''
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            return row[column.key];
+          }}
+          renderActions={(row) => (
+            <div className={isSmall ? 'small-resolution' : ''}>
+              <button
+                type="button"
+                onClick={() => handleEditContactClick(row.id, row.name)}
+              >
+                Kontakty
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditMeetClick(row.id, row.name)}
+                className="blue-btn"
+              >
+                Schůzky
+              </button>
+              <button
+                type="button"
+                onClick={() => handleworkshoplistClick(row.id, row.name)}
+              >
+                Akce
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditEventClick(row.id, row.name)}
+                className="green-btn"
+              >
+                Událost
+              </button>
+              <button
+                type="button"
+                onClick={() => handleGiftlistClick(row.id, row.name)}
+                className="orange-btn"
+              >
+                Dary
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePracticeListClick(row.id, row.name)}
+                className="purple-btn"
+              >
+                Praxe
+              </button>
+              {user.user !== 'reader' ? (
+                <button
+                  type="button"
+                  onClick={() => handledelClick(row.id, row.name)}
+                  className="del-btn"
+                >
+                  Smazat
+                </button>
+              ) : (
+                ''
+              )}
+            </div>
+          )}
+        />
           <div
             className="selection-panel"
             style={{
