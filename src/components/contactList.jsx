@@ -22,7 +22,6 @@ const ContactList = ({
     ? { id: null, firm_id: firmId, main: !contacts.some((contact) => contact.main === '1') }
     : contacts.find((entry) => String(entry.id) === itemId);
 
-
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -52,8 +51,11 @@ const ContactList = ({
   const deleteContact = async (contactId) => {
     try {
       const response = await axios.delete(`${apiUrl}contacts/${contactId}`);
+
       if (response.status === 200) {
-        setContacts((prevContacts) => prevContacts.filter((contact) => contact.id !== contactId));
+        setContacts((prevContacts) => prevContacts.filter(
+          (contact) => contact.id !== contactId,
+        ));
       } else {
         setError('Smazání kontaktu selhalo');
       }
@@ -63,16 +65,19 @@ const ContactList = ({
       setLoading(false);
     }
   };
+
   const handleClose = () => {
     navigate(listPath);
   };
 
   const handledelClick = (contact) => {
     const confirmed = window.confirm('Chceš to fakt vymazat?');
+
     if (confirmed) {
       deleteContact(contact.id);
     }
   };
+
   const handleEditClick = (contact) => {
     navigate(`${listPath}/${contact.id || 'new'}`);
   };
@@ -108,6 +113,7 @@ const ContactList = ({
       </p>
     );
   }
+
   return (
     <div>
       {msg && (<Notification message={msg} type="edit-firm-success" />)}
@@ -135,7 +141,6 @@ const ContactList = ({
                 <th>Telefon</th>
                 <th>LinkedIN</th>
                 <th />
-
               </tr>
             </thead>
             <tbody>
@@ -147,7 +152,7 @@ const ContactList = ({
                   <td data-label="Jméno">{contact.surname}</td>
                   <td data-label="E-mail"><a href={`${contact.mailto.replace(/\+/g, ' ')}`}>{contact.email}</a></td>
                   <td data-label="Telefon"><a href={`tel:${contact.phone}`}>{contact.phone}</a></td>
-                  <td data-label="LinkedIN">{ contact.linkedin ? (<a href={`${contact.linkedin}`}>LinkedIN</a>) : '\u00A0'}</td>
+                  <td data-label="LinkedIN">{contact.linkedin ? (<a href={`${contact.linkedin}`}>LinkedIN</a>) : '\u00A0'}</td>
                   <td>
                     <button type="button" onClick={() => handleEditClick(contact)}>upravit</button>
                     <button type="button" onClick={() => handledelClick(contact)} className="del-btn">smazat</button>
@@ -162,7 +167,15 @@ const ContactList = ({
                 <td />
                 <td />
                 <td />
-                <td><button type="button" onClick={() => handleEditClick({ id: null, firm_id: firmId, main: !contacts.filter((contact) => contact.main === '1').length })}>Přidat kontakt</button></td>
+                <td />
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick({ id: null })}
+                  >
+                    Přidat kontakt
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>

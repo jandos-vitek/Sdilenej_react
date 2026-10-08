@@ -3,6 +3,7 @@ import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import DataTable from './DataTable';
 import EditMeetForm from './editMeetForm';
 import { useUrl } from './UrlProvider';
 import { convertDateTimeToCzech } from '../utils/czechdates';
@@ -69,9 +70,11 @@ const MeetList = ({
       deleteMeet(meet.id);
     }
   };
+
   const handleEditClick = (meet) => {
     navigate(`${listPath}/${meet.id || 'new'}`);
   };
+
   const handleClose = () => {
     navigate(listPath);
   };
@@ -98,39 +101,72 @@ const MeetList = ({
       </p>
     );
   }
+
+  const columns = [
+    {
+      key: 'date_time',
+      label: 'Datum a čas',
+    },
+    {
+      key: 'notes',
+      label: 'Poznámka',
+    },
+  ];
+
   return (
     <div>
       {!itemId && <button type="button" onClick={onClose}>Zpět na firmy</button>}
       {selectedMeet ? (
         <EditMeetForm key={itemId} meet={selectedMeet} onSave={handleSave} onClose={handleClose} firmName={firmName.split('/(kont)')[0]} />
       ) : (
-        <table className="responsive-table">
-          <caption><h3>{`${firmName.split('/(kont)')[0]} - schůzky`}</h3></caption>
-          <thead>
+        <DataTable
+          data={meets}
+          columns={columns}
+          className="responsive-table"
+          caption={(
+            <h3>
+              {`${firmName.split('/(kont)')[0]} - schůzky`}
+            </h3>
+          )}
+          renderCell={(meet, column) => {
+            if (column.key === 'date_time') {
+              return convertDateTimeToCzech(meet.date_time);
+            }
+
+            return meet[column.key];
+          }}
+          renderActions={(meet) => (
+            <>
+              <button
+                type="button"
+                onClick={() => handleEditClick(meet)}
+              >
+                upravit
+              </button>
+              <button
+                type="button"
+                onClick={() => handledelClick(meet)}
+                className="del-btn"
+              >
+                smazat
+              </button>
+            </>
+          )}
+          renderFooter={() => (
             <tr>
-              <th>Datum a čas</th>
-              <th>Poznámka</th>
-              <th />
-              <th />
+              <td />
+              <td />
+              <td>
+                <button
+                  type="button"
+                  onClick={() => handleEditClick({ firm_id: firmId })}
+                >
+                  Přidat schůzku
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {meets.map((meet) => (
-              <tr key={meet.id}>
-                <td data-label="Datum a čas">{convertDateTimeToCzech(meet.date_time)}</td>
-                <td data-label="Poznámka">{meet.notes}</td>
-                <td><button type="button" onClick={() => handleEditClick(meet)}>upravit</button></td>
-                <td><button type="button" onClick={() => handledelClick(meet)} className="del-btn">smazat</button></td>
-              </tr>
-            ))}
-            <tr>
-              <td />
-              <td />
-              <td />
-              <td><button type="button" onClick={() => handleEditClick({ firm_id: firmId })}>Přidat schůzku</button></td>
-            </tr>
-          </tbody>
-        </table>
+          )}
+        />
       )}
     </div>
   );
