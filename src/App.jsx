@@ -13,6 +13,7 @@ import EditEventForm from './components/editEventForm';
 import EventList from './components/eventsList';
 import ExportForm from './components/exportForm';
 import FirmList from './components/firmList';
+import FirmActivityPage from './components/firmActivityPage';
 // import GAuthProvider from './components/google/googleAuthProvider';
 import HideColm from './components/hideColm';
 import Nav from './components/nav';
@@ -56,6 +57,12 @@ const AppContentInner = () => {
         <Route path="/firm" element={<FirmList />} />
         <Route path="/firm/:firmName" element={<FirmList />} />
         <Route path="/:idFromURL" element={<FirmList />} />
+        <Route path="/contacts/:firmId" element={<FirmActivityPage kind="contacts" />} />
+        <Route path="/contacts/:firmId/:itemId" element={<FirmActivityPage kind="contacts" />} />
+        <Route path="/meets/:firmId" element={<FirmActivityPage kind="meets" />} />
+        <Route path="/meets/:firmId/:itemId" element={<FirmActivityPage kind="meets" />} />
+        <Route path="/workshops/:firmId" element={<FirmActivityPage kind="workshops" />} />
+        <Route path="/workshops/:firmId/:itemId" element={<FirmActivityPage kind="workshops" />} />
         <Route path="/events" element={<EventList />} />
         <Route path="/events/:id" element={<EventList />} />
         <Route path="/events/:id/:eventId" element={<EditEventForm />} />

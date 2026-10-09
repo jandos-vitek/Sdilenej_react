@@ -2,24 +2,35 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import DataTable from './DataTable';
 import EditMeetForm from './editMeetForm';
 import { useUrl } from './UrlProvider';
 import { convertDateTimeToCzech } from '../utils/czechdates';
 
 const MeetList = ({
-  firmId, onSave, firmName, onClose,
+  firmId, firmName, onClose,
 }) => {
   const { apiUrl } = useUrl();
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedMeet, setSelectedMeet] = useState(null);
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const listPath = `/meets/${firmId}`;
+  const selectedMeet = itemId === 'new'
+    ? { firm_id: firmId }
+    : meets.find((entry) => String(entry.id) === itemId);
+
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
     const fetchMeets = async () => {
       try {
         const response = await axios.get(`${apiUrl}meets/${firmId}`);
+        if (!active) return;
         if (Array.isArray(response.data) && response.data.length === 0
         && response.data.msg !== undefined) {
           setError('Žádné schůzky.');
@@ -28,14 +39,15 @@ const MeetList = ({
           setMeets(response.data);
         }
       } catch (err) {
-        setError(err.message);
+        if (active) setError(err.message);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchMeets();
-  }, [firmId]);
+    return () => { active = false; };
+  }, [apiUrl, firmId, itemId]);
 
   const deleteMeet = async (meetId) => {
     try {
@@ -60,47 +72,27 @@ const MeetList = ({
   };
 
   const handleEditClick = (meet) => {
-    console.log(meet);
-    setSelectedMeet(meet);
+    navigate(`${listPath}/${meet.id || 'new'}`);
   };
 
   const handleClose = () => {
-    setSelectedMeet(null);
+    navigate(listPath);
   };
-
-  const handleSave = (meetupdatedMeet) => {
-    const existingMeet = meets.find((meet) => meet.id === meetupdatedMeet.id);
-
-    if (!existingMeet) {
-      setMeets([...meets, meetupdatedMeet]);
-    } else {
-      setMeets(meets.map(
-        (meet) => (meet.id === meetupdatedMeet.id ? meetupdatedMeet : meet),
-      ));
-    }
-
-    setSelectedMeet(null);
+  const handleSave = () => {
+    navigate(listPath);
   };
-
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      if (!selectedMeet) {
-        onClose(null);
-      }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedMeet]);
 
   if (loading) {
     return <p className="no-data">Načítám...</p>;
   }
-
+  if (itemId && !selectedMeet && !error) {
+    return (
+      <div>
+        <button type="button" onClick={handleClose}>Zpět na seznam</button>
+        <p className="no-data">Záznam nebyl nalezen.</p>
+      </div>
+    );
+  }
   if (error) {
     return (
       <p className="no-data">
@@ -122,15 +114,10 @@ const MeetList = ({
   ];
 
   return (
-    <div className={`floating-layer ${!firmId ? 'hidden' : ''}`}>
-      <button className="close-button" type="button" onClick={onSave}>X</button>
+    <div>
+      {!itemId && <button type="button" onClick={onClose}>Zpět na firmy</button>}
       {selectedMeet ? (
-        <EditMeetForm
-          meet={selectedMeet}
-          onSave={handleSave}
-          onClose={handleClose}
-          firmName={firmName.split('/(kont)')[0]}
-        />
+        <EditMeetForm key={itemId} meet={selectedMeet} onSave={handleSave} onClose={handleClose} firmName={firmName.split('/(kont)')[0]} />
       ) : (
         <DataTable
           data={meets}
@@ -189,7 +176,6 @@ export default MeetList;
 
 MeetList.propTypes = {
   firmId: PropTypes.string.isRequired,
-  onSave: PropTypes.func.isRequired,
   firmName: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
 };

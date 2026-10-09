@@ -2,45 +2,51 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
-import DataTable from './DataTable';
+import { useNavigate, useParams } from 'react-router-dom';
 import EditContactForm from './editContactForm';
 import Notification from './notification';
 import { useUrl } from './UrlProvider';
 
 const ContactList = ({
-  firmId, firmName, onClose, onSave,
+  firmId, firmName, onClose,
 }) => {
   const { apiUrl } = useUrl();
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [msg, setMsg] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const listPath = `/contacts/${firmId}`;
+  const selectedContact = itemId === 'new'
+    ? { id: null, firm_id: firmId, main: !contacts.some((contact) => contact.main === '1') }
+    : contacts.find((entry) => String(entry.id) === itemId);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
     const fetchContacts = async () => {
       try {
         const response = await axios.get(`${apiUrl}contacts/${firmId}`);
-
-        if (
-          Array.isArray(response.data)
-          && response.data.length === 0
-          && response.data.msg !== undefined
-        ) {
+        if (!active) return;
+        if (Array.isArray(response.data) && response.data.length === 0
+        && response.data.msg !== undefined) {
           setError('Žádné kontakty.');
         } else {
           console.log(response.data);
           setContacts(response.data);
         }
       } catch (err) {
-        setError(err.message);
+        if (active) setError(err.message);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchContacts();
-  }, [firmId, selectedContact]);
+    return () => { active = false; };
+  }, [apiUrl, firmId, itemId]);
 
   const deleteContact = async (contactId) => {
     try {
@@ -61,7 +67,7 @@ const ContactList = ({
   };
 
   const handleClose = () => {
-    setSelectedContact(null);
+    navigate(listPath);
   };
 
   const handledelClick = (contact) => {
@@ -73,63 +79,32 @@ const ContactList = ({
   };
 
   const handleEditClick = (contact) => {
-    console.log(contact);
-    setSelectedContact(contact);
+    navigate(`${listPath}/${contact.id || 'new'}`);
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      if (!selectedContact) {
-        onClose(null);
-      }
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedContact]);
-
-  const handleSave = (updatedContact) => {
-    setContacts(contacts.map(
-      (contact) => (
-        contact.id === updatedContact.id
-          ? updatedContact
-          : contact
-      ),
-    ));
-
-    setSelectedContact(null);
-    onSave();
-  };
+  const handleSave = () => navigate(listPath);
 
   const handleCopy = (inputValue) => {
-    navigator.clipboard.writeText(inputValue)
-      .then(() => {
-        setMsg('Zkopírováno!');
-      })
-      .catch(() => {
-        setError('Chyba při kopírování.');
-      });
+    navigator.clipboard.writeText(inputValue).then(() => {
+      setMsg('Zkopírováno!');
+    }).catch((err) => {
+      setError(`Chyba při kopírování: ${err.message}`);
+    });
   };
 
-  const Clipboard = (formData) => {
-    console.log(formData);
-
-    const formattedString = formData
-      .filter((item) => item)
-      .join(', ');
-
-    handleCopy(formattedString);
-  };
+  const Clipboard = (values) => handleCopy(values.filter(Boolean).join(', '));
 
   if (loading) {
     return <p className="no-data">Načítám...</p>;
   }
-
+  if (itemId && !selectedContact && !error) {
+    return (
+      <div>
+        <button type="button" onClick={handleClose}>Zpět na seznam</button>
+        <p className="no-data">Záznam nebyl nalezen.</p>
+      </div>
+    );
+  }
   if (error) {
     return (
       <p className="no-data">
@@ -139,56 +114,13 @@ const ContactList = ({
     );
   }
 
-  const columns = [
-    {
-      key: 'main',
-      label: 'Hlavní',
-    },
-    {
-      key: 'active_c',
-      label: 'Aktivní',
-    },
-    {
-      key: 'img',
-      label: 'Foto',
-      sortable: false,
-    },
-    {
-      key: 'surname',
-      label: 'Jméno',
-    },
-    {
-      key: 'email',
-      label: 'E-mail',
-    },
-    {
-      key: 'phone',
-      label: 'Telefon',
-    },
-    {
-      key: 'linkedin',
-      label: 'LinkedIN',
-    },
-  ];
-
   return (
-    <div className={`floating-layer ${!firmId ? 'hidden' : ''}`}>
-      {msg && (
-        <Notification
-          message={msg}
-          type="edit-firm-success"
-        />
-      )}
-
-      {error && (
-        <Notification
-          message={error}
-          type="edit-firm-error"
-        />
-      )}
-
+    <div>
+      {msg && (<Notification message={msg} type="edit-firm-success" />)}
+      {error && (<Notification message={error} type="edit-firm-error" />)}
       {selectedContact ? (
         <EditContactForm
+          key={itemId}
           contact={selectedContact}
           onSave={handleSave}
           onClose={handleClose}
@@ -196,104 +128,38 @@ const ContactList = ({
         />
       ) : (
         <>
-          <button
-            className="close-button"
-            type="button"
-            onClick={onClose}
-          >
-            X
-          </button>
-
-          <DataTable
-            data={contacts}
-            columns={columns}
-            className="responsive-table"
-            caption={(
-              <h3>
-                {`${firmName.split('/(kont)')[0]} - kontakty`}
-              </h3>
-            )}
-            renderCell={(contact, column) => {
-              if (column.key === 'main') {
-                return contact.main === '1' ? '✅' : '☐';
-              }
-
-              if (column.key === 'active_c') {
-                return contact.active_c === '1' ? '✅' : '☐';
-              }
-
-              if (column.key === 'img') {
-                return (
-                  <img
-                    src={contact.img}
-                    alt=""
-                    className="kontakt-img"
-                  />
-                );
-              }
-
-              if (column.key === 'surname') {
-                return contact.surname;
-              }
-
-              if (column.key === 'email') {
-                return (
-                  <a href={contact.mailto.replace(/\+/g, ' ')}>
-                    {contact.email}
-                  </a>
-                );
-              }
-
-              if (column.key === 'phone') {
-                return (
-                  <a href={`tel:${contact.phone}`}>
-                    {contact.phone}
-                  </a>
-                );
-              }
-
-              if (column.key === 'linkedin') {
-                return contact.linkedin ? (
-                  <a href={contact.linkedin}>
-                    LinkedIN
-                  </a>
-                ) : '\u00A0';
-              }
-
-              return contact[column.key];
-            }}
-            renderActions={(contact) => (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleEditClick(contact)}
-                >
-                  upravit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handledelClick(contact)}
-                  className="del-btn"
-                >
-                  smazat
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => Clipboard([
-                    contact.surname,
-                    contact.email,
-                    contact.phone,
-                    contact.linkedin,
-                  ])}
-                  className="fn-btn"
-                >
-                  Kontakt do schránky
-                </button>
-              </>
-            )}
-            renderFooter={() => (
+          <button type="button" onClick={onClose}>Zpět na firmy</button>
+          <table className="responsive-table">
+            <caption><h3>{`${firmName.split('/(kont)')[0]} - kontakty`}</h3></caption>
+            <thead>
+              <tr>
+                <th>Hlavní</th>
+                <th>Aktivní</th>
+                <th>Foto</th>
+                <th>Jméno</th>
+                <th>E-mail</th>
+                <th>Telefon</th>
+                <th>LinkedIN</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((contact) => (
+                <tr key={contact.id}>
+                  <td data-label="Hlavní">{contact.main === '1' ? '\u2705' : '\u2610'}</td>
+                  <td data-label="Aktivní">{contact.active_c === '1' ? '\u2705' : '\u2610'}</td>
+                  <td data-label="Foto"><img src={contact.img} alt="" className="kontakt-img" /></td>
+                  <td data-label="Jméno">{contact.surname}</td>
+                  <td data-label="E-mail"><a href={`${contact.mailto.replace(/\+/g, ' ')}`}>{contact.email}</a></td>
+                  <td data-label="Telefon"><a href={`tel:${contact.phone}`}>{contact.phone}</a></td>
+                  <td data-label="LinkedIN">{contact.linkedin ? (<a href={`${contact.linkedin}`}>LinkedIN</a>) : '\u00A0'}</td>
+                  <td>
+                    <button type="button" onClick={() => handleEditClick(contact)}>upravit</button>
+                    <button type="button" onClick={() => handledelClick(contact)} className="del-btn">smazat</button>
+                    <button type="button" onClick={() => Clipboard([contact.surname, contact.email, contact.phone, contact.linkedin])} className="fn-btn">Kontakt do schránky</button>
+                  </td>
+                </tr>
+              ))}
               <tr>
                 <td />
                 <td />
@@ -305,20 +171,14 @@ const ContactList = ({
                 <td>
                   <button
                     type="button"
-                    onClick={() => handleEditClick({
-                      id: null,
-                      firm_id: firmId,
-                      main: !contacts.filter(
-                        (contact) => contact.main === '1',
-                      ).length,
-                    })}
+                    onClick={() => handleEditClick({ id: null })}
                   >
                     Přidat kontakt
                   </button>
                 </td>
               </tr>
-            )}
-          />
+            </tbody>
+          </table>
         </>
       )}
     </div>
@@ -331,5 +191,4 @@ ContactList.propTypes = {
   firmId: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   firmName: PropTypes.string.isRequired,
-  onSave: PropTypes.func.isRequired,
 };

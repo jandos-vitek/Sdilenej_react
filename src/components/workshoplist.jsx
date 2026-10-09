@@ -2,13 +2,13 @@
 import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import EditWSForm from './editWSForm';
 import { useUrl } from './UrlProvider';
 import convertDateToCzech from '../utils/czechdates';
 
 const WorkshopList = ({
   firmId,
-  onSave,
   firmName,
   onClose,
 }) => {
@@ -16,13 +16,24 @@ const WorkshopList = ({
   const [workshops, setWorkshops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const listPath = `/workshops/${firmId}`;
+  const selectedContact = itemId === 'new'
+    ? { firmId, date: '', type: '', notes: '' }
+    : workshops.find((entry) => String(entry.id) === itemId);
+
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
     const fetchworkshops = async () => {
       try {
         const response = await axios.get(`${apiUrl}workshops/${firmId}`);
+        if (!active) return;
         if (Array.isArray(response.data) && response.data.length === 0) {
+          setWorkshops([]);
           // setError('errr');
           console.log('WS žádná data');
         } else {
@@ -30,14 +41,15 @@ const WorkshopList = ({
           setWorkshops(response.data);
         }
       } catch (err) {
-        setError(err.message);
+        if (active) setError(err.message);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchworkshops();
-  }, [firmId, selectedContact]);
+    return () => { active = false; };
+  }, [apiUrl, firmId, itemId]);
 
   const deleteContact = async (contactId) => {
     try {
@@ -63,48 +75,39 @@ const WorkshopList = ({
   };
 
   const handleEditClick = (ws) => {
-    console.log(ws);
-    setSelectedContact(ws);
+    navigate(`${listPath}/${ws.id || 'new'}`);
   };
   const handleClose = () => {
-    setSelectedContact(null);
+    navigate(listPath);
   };
-  const handleSave = (updatedWorkshop) => {
-    setWorkshops(workshops.map(
-      (workshop) => (workshop.id === updatedWorkshop.id ? updatedWorkshop : workshop),
-    ));
-    setSelectedContact(null); // Close the form after saving
+  const handleSave = () => {
+    navigate(listPath);
   };
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-      if (!selectedContact) {
-        onClose(null);
-      }
-    }
-  };
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedContact]);
 
   if (loading) {
     return <p className="no-data">načítání...</p>;
   }
 
-  return (
+  if (itemId && !selectedContact && !error) {
+    return (
+      <div>
+        <button type="button" onClick={handleClose}>Zpět na seznam</button>
+        <p className="no-data">Záznam nebyl nalezen.</p>
+      </div>
+    );
+  }
 
-    <div className={`floating-layer ${!firmId ? 'hidden' : ''}`}>
+  return (
+    <div>
       {error ? (
         <p className="edit-firm-success edit-firm-error">
           Chyba:&nbsp;
           {error}
         </p>
       ) : ''}
-      <button className="close-button" type="button" onClick={onSave}>X</button>
+      {!itemId && <button type="button" onClick={onClose}>Zpět na firmy</button>}
       {selectedContact ? (
-        <EditWSForm contact={selectedContact} onSave={handleSave} onClose={handleClose} />
+        <EditWSForm key={itemId} contact={{ ...selectedContact, firmId: selectedContact.firmId || firmId }} onSave={handleSave} onClose={handleClose} />
       ) : (
         <table className="responsive-table">
           <caption><h3>{`Akce s firmou ${firmName.split('/(kont)')[0]}`}</h3></caption>
@@ -148,7 +151,6 @@ const WorkshopList = ({
 
 WorkshopList.propTypes = {
   firmId: PropTypes.string,
-  onSave: PropTypes.func.isRequired,
   firmName: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
 };

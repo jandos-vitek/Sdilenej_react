@@ -125,7 +125,7 @@ const EditContactForm = ({
         {formData.id ? 'Upravit ' : 'Přidat '}
         kontakt
       </h3>
-      <button className="close-button" type="button" onClick={onClose}>X</button>
+      <button type="button" onClick={onClose}>Zpět na seznam</button>
       <h2>{firmName}</h2>
       {isErrorVisible && (<Notification message="Chyba při ukládání!" type="edit-firm-error" />)}
       <div className="hidden">
